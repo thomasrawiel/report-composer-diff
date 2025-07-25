@@ -1,0 +1,22 @@
+{
+  "name": "traw/report-composer-diff",
+  "authors": [
+    {
+      "name": "Thomas Rawiel",
+      "role": "Developer"
+    }
+  ],
+  "license": "GPL-3.0-or-later",
+  "bin": [
+    "bin/composer-diff"
+  ],
+  "require": {
+    "php": ">=8.2",
+    "symfony/console": "^7.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "TRAW\\ReportComposerDiff\\": "Classes/"
+    }
+  }
+}
