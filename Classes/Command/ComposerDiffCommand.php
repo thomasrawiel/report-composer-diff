@@ -183,7 +183,7 @@ class ComposerDiffCommand extends Command
                 }
             }
 
-            if($group === 'other') {
+            if ($group === 'other') {
                 if ($name === 'typo3/cms-core') {
                     $group = 'typo3-core';
                 } elseif ($type === 'typo3-cms-framework') {
@@ -232,17 +232,23 @@ class ComposerDiffCommand extends Command
         if ($isJson) {
             $jsonOutput = json_encode([
                 'summary' => $summary,
-                'report' => $report
+                'report' => $report,
             ], JSON_PRETTY_PRINT);
             $fileWritten = $this->writeFile($filename ?? 'report.json', $jsonOutput);
             $output->writeln("<info>File written to {$fileWritten}</info>");
         } elseif ($isHtml) {
-            $css = 'body,table{background-color:hsl(0 0% 100%)}h2,th{font-weight:600;color:hsl(222.2 84% 4.9%)}body,h2,td:nth-child(2),th{color:hsl(222.2 84% 4.9%)}*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;line-height:1.6;min-height:100vh;max-width:800px;margin:0 auto;padding:2rem 1rem}h2{font-size:1.875rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid}td,th{padding:.75rem 1rem;border-bottom:1px solid;font-size:.875rem}h2:first-of-type{margin-top:0}table{width:100%;border-collapse:collapse;margin-bottom:2rem;border-radius:.5rem;border:1px solid;overflow:hidden}th{background-color:hsl(210 40% 98%);text-align:left}tr:last-child td{border-bottom:none}.added{background-color:hsl(143 85% 96%);border-left:3px solid hsl(142 76% 36%)}.removed{background-color:hsl(0 86% 97%);border-left:3px solid hsl(0 84% 60%)}.updated{background-color:hsl(48 100% 96%);border-left:3px solid hsl(45 93% 47%)}.unchanged{background-color:hsl(210 40% 98%);border-left:3px solid hsl(215 16% 47%)}td:first-child{font-weight:500;font-size:.75rem;text-transform:uppercase;letter-spacing:.025em}td:nth-child(2),td:nth-child(3),td:nth-child(4){font-family:ui-monospace,SFMono-Regular,"SF Mono",Consolas,"Liberation Mono",Menlo,monospace;font-size:.8125rem}.added td:first-child{color:hsl(142 76% 36%)}.removed td:first-child{color:hsl(0 84% 60%)}.updated td:first-child{color:hsl(45 93% 47%)}.unchanged td:first-child{color:hsl(215 16% 47%)}td:nth-child(2){font-weight:500}td:nth-child(3),td:nth-child(4){color:hsl(215.4 16.3% 46.9%);font-weight:400}td:nth-child(4){color:hsl(142 76% 36%);font-weight:500}@media (max-width:768px){td:nth-child(2),td:nth-child(3),td:nth-child(4){font-size:.75rem}body{padding:1rem .5rem}h2{font-size:1.5rem;margin:1.5rem 0 .75rem}td,th{padding:.5rem .75rem;font-size:.8125rem}td:nth-child(2){word-break:break-all}}@media (max-width:480px){body{padding:1rem .25rem}table{font-size:.75rem}td,th{padding:.5rem}h2{font-size:1.25rem}}@media print{body{max-width:none;margin:0;padding:1rem}table{border:1px solid}}@media (prefers-color-scheme:dark){body,table{background-color:hsl(222.2 84% 4.9%)}h2,td,th{border-bottom-color:hsl(217.2 32.6% 17.5%)}body,h2,td:nth-child(2),th{color:hsl(210 40% 98%)}table{border-color:hsl(217.2 32.6% 17.5%)}th{background-color:hsl(217.2 32.6% 17.5%)}td:nth-child(3){color:hsl(215.4 16.3% 56.9%)}.added{background-color:hsl(142 76% 6%)}.removed{background-color:hsl(0 84% 6%)}.updated{background-color:hsl(45 93% 6%)}.unchanged{background-color:hsl(217.2 32.6% 17.5%)}}';
+            $css = $this->getCss();
             $htmlOutput = '<html><head><style>' . $css . '</style></head><body>';
 
-            $htmlOutput .= '<h2>Summary per group</h2><table><tr><th>Group</th><th>Added</th><th>Removed</th><th>Updated</th><th>Unchanged</th></tr>';
+            $htmlOutput .= '<h2>Summary per group</h2><table class="summary-table"><tr><th>Group</th><th>Added</th><th>Removed</th><th>Updated</th><th>Unchanged</th></tr>';
             foreach ($summary as $group => $counts) {
-                $htmlOutput .= "<tr><td>$group</td><td>{$counts['added']}</td><td>{$counts['removed']}</td><td>{$counts['updated']}</td><td>{$counts['unchanged']}</td></tr>";
+                $htmlOutput .= "<tr>
+                    <td>$group</td>
+                    <td class='added'>{$counts['added']}</td>
+                    <td class='removed'>{$counts['removed']}</td>
+                    <td class='updated'>{$counts['updated']}</td>
+                    <td class='unchanged'>{$counts['unchanged']}</td>
+                </tr>";
             }
             $htmlOutput .= '</table>';
 
@@ -363,5 +369,276 @@ class ComposerDiffCommand extends Command
             $fromPatch !== $toPatch => 'patch',
             default => 'unchanged'
         };
+    }
+
+    private function getCss(): string
+    {
+        return "
+        body,
+        table {
+            background-color: hsl(0 0% 100%);
+        }
+        
+        h2,
+        th {
+            font-weight: 600;
+            color: hsl(222.2 84% 4.9%);
+        }
+        
+        body,
+        h2,
+        td:nth-child(2),
+        th {
+            color: hsl(222.2 84% 4.9%);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            min-height: 100vh;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        
+        h2 {
+            font-size: 1.875rem;
+            margin: 2rem 0 1rem;
+            padding-bottom: .5rem;
+            border-bottom: 1px solid;
+        }
+        
+        td,
+        th {
+            padding: .75rem 1rem;
+            border-bottom: 1px solid;
+            font-size: .875rem;
+        }
+        
+        h2:first-of-type {
+            margin-top: 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+            border-radius: .5rem;
+            border: 1px solid;
+            overflow: hidden;
+        }
+        
+        th {
+            background-color: hsl(210 40% 98%);
+            text-align: left;
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .added {
+            background-color: hsl(143 85% 96%);
+            border-left: 3px solid hsl(142 76% 36%);
+        }
+        
+        .removed {
+            background-color: hsl(0 86% 97%);
+            border-left: 3px solid hsl(0 84% 60%);
+        }
+        
+        .updated {
+            background-color: hsl(48 100% 96%);
+            border-left: 3px solid hsl(45 93% 47%);
+        }
+        
+        .unchanged {
+            background-color: hsl(210 40% 98%);
+            border-left: 3px solid hsl(215 16% 47%);
+        }
+        
+        td:first-child {
+            font-weight: 500;
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: .025em;
+        }
+        
+        td:nth-child(2),
+        td:nth-child(3),
+        td:nth-child(4) {
+            font-family: ui-monospace, SFMono-Regular, \"SF Mono\", Consolas, \"Liberation Mono\", Menlo, monospace;
+            font-size: .8125rem;
+        }
+        
+        .added td:first-child {
+            color: hsl(142 76% 36%);
+        }
+        
+        .removed td:first-child {
+            color: hsl(0 84% 60%);
+        }
+        
+        .updated td:first-child {
+            color: hsl(45 93% 47%);
+        }
+        
+        .unchanged td:first-child {
+            color: hsl(215 16% 47%);
+        }
+        
+        td:nth-child(2) {
+            font-weight: 500;
+        }
+        
+        td:nth-child(3),
+        td:nth-child(4) {
+            color: hsl(215.4 16.3% 46.9%);
+            font-weight: 400;
+        }
+        
+        td:nth-child(4) {
+            color: hsl(142 76% 36%);
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            td:nth-child(2),
+            td:nth-child(3),
+            td:nth-child(4) {
+                font-size: .75rem;
+            }
+        
+            body {
+                padding: 1rem .5rem;
+            }
+        
+            h2 {
+                font-size: 1.5rem;
+                margin: 1.5rem 0 .75rem;
+            }
+        
+            td,
+            th {
+                padding: .5rem .75rem;
+                font-size: .8125rem;
+            }
+        
+            td:nth-child(2) {
+                word-break: break-all;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 1rem .25rem;
+            }
+        
+            table {
+                font-size: .75rem;
+            }
+        
+            td,
+            th {
+                padding: .5rem;
+            }
+        
+            h2 {
+                font-size: 1.25rem;
+            }
+        }
+        
+        @media print {
+            body {
+                max-width: none;
+                margin: 0;
+                padding: 1rem;
+            }
+        
+            table {
+                border: 1px solid;
+            }
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            body,
+            table {
+                background-color: hsl(222.2 84% 4.9%);
+            }
+        
+            h2,
+            td,
+            th {
+                border-bottom-color: hsl(217.2 32.6% 17.5%);
+            }
+        
+            body,
+            h2,
+            td:nth-child(2),
+            th {
+                color: hsl(210 40% 98%);
+            }
+        
+            table {
+                border-color: hsl(217.2 32.6% 17.5%);
+            }
+        
+            th {
+                background-color: hsl(217.2 32.6% 17.5%);
+            }
+        
+            td:nth-child(3) {
+                color: hsl(215.4 16.3% 56.9%);
+            }
+        
+            .added {
+                background-color: hsl(142 76% 6%);
+            }
+        
+            .removed {
+                background-color: hsl(0 84% 6%);
+            }
+        
+            .updated {
+                background-color: hsl(45 93% 6%);
+            }
+        
+            .unchanged {
+                background-color: hsl(217.2 32.6% 17.5%);
+            }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* Summary table tweaks */
+        .summary-table td:first-child {
+            text-transform: none;
+            /* no uppercase for group names */
+            font-weight: 600;
+            font-size: .875rem;
+            letter-spacing: normal;
+        }
+        
+        /* Color numbers according to status */
+        .summary-table .added {
+            color: hsl(142 76% 36%);
+        }
+        
+        .summary-table .removed {
+            color: hsl(0 84% 60%);
+        }
+        
+        .summary-table .updated {
+            color: hsl(45 93% 47%);
+        }
+        
+        .summary-table .unchanged {
+            color: hsl(215 16% 47%);
+        }
+        ";
     }
 }
