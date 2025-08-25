@@ -1,6 +1,15 @@
 # report-composer-diff
 
-Create a report of changes in the composer.lock file based on the given git-refs
+This Symfony Console command compares composer.lock files between two Git references (tags, branches, or commits) and generates a detailed report of package changes.
+
+Key features:
+
+- Supports specifying source (--from) and target (--to) Git tags; if not provided, falls back to the two latest tags.
+- Reads composer.lock directly from Git without checking out the refs.
+- Classifies packages into added, removed, updated, and unchanged.
+- Supports custom groups based on package name prefixes, in addition to built-in TYPO3 groups. Multiple prefixes per group are allowed.
+- Outputs results in multiple formats: console, HTML, JSON, Markdown, or plain text.
+- Generates a summary table per group and a detailed per-package report.
 
 # Usage
 
@@ -13,7 +22,7 @@ Create a report of changes in the composer.lock file based on the given git-refs
 --from      - Begin at git-ref
 --to        - Stop at git-ref
 --repo      - change directory
---group     - add one or more custom groups in the format groupname:prefix/
+--group     - add one or more custom groups in the format groupname:prefix/,prefix2/,prefix3
 ```
 
 
@@ -57,6 +66,14 @@ Write to a subdirectory
 
 `php vendor/bin/composer-diff --html --filename=report/report.html`
 
+---
+
 Custom group
 
-`php vendor/bin/composer-diff --group=mmygroup:traw/ --group=mycompany:namespaceprefix/` 
+`php vendor/bin/composer-diff --group=mmygroup:traw/ --group=mycompany:namespaceprefix/`
+
+---
+
+Multiple prefixes in one group - groupname:comma-list
+
+`php vendor/bin/composer-diff --group=mycompany:prefix1/,prefix2/,prefix3`
