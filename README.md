@@ -7,6 +7,8 @@ Create a report of changes in the composer.lock file based on the given git-refs
 ```
 --html      - Write report.html
 --json      - Write report.json
+--txt       - Write report.txt
+--md        - Write report.md
 --filename  - Filename (& directory) where the report should be saved (needs --html or --json)
 --from      - Begin at git-ref
 --to        - Stop at git-ref
@@ -50,6 +52,6 @@ Compare Branch to Branch
 
 ---
 
+Write to a subdirectory
 
-
-php vendor/bin/composer-diff --filename=report/report.html
+`php vendor/bin/composer-diff --html --filename=report/report.html`
