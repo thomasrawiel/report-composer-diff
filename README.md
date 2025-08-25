@@ -13,6 +13,7 @@ Create a report of changes in the composer.lock file based on the given git-refs
 --from      - Begin at git-ref
 --to        - Stop at git-ref
 --repo      - change directory
+--group     - add one or more custom groups in the format groupname:prefix/
 ```
 
 
@@ -55,3 +56,7 @@ Compare Branch to Branch
 Write to a subdirectory
 
 `php vendor/bin/composer-diff --html --filename=report/report.html`
+
+Custom group
+
+`php vendor/bin/composer-diff --group=mmygroup:traw/ --group=mycompany:namespaceprefix/` 

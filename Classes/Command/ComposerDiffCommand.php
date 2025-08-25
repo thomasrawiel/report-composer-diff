@@ -21,6 +21,12 @@ class ComposerDiffCommand extends Command
             ->addOption('from', null, InputOption::VALUE_REQUIRED, 'Source Git ref')
             ->addOption('to', null, InputOption::VALUE_REQUIRED, 'Target Git ref')
             ->addOption('repo', null, InputOption::VALUE_OPTIONAL, 'Path to Git repository', getcwd())
+            ->addOption(
+                'group',
+                null,
+                InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
+                'Custom package group(s) in the format "groupName:namespacePrefix" (e.g. "mygroup:mycompany")'
+            )
             ->addOption('html', null, InputOption::VALUE_NONE, 'Output as HTML')
             ->addOption('json', null, InputOption::VALUE_NONE, 'Output as JSON')
             ->addOption('md', null, InputOption::VALUE_NONE, 'Output as MD')
@@ -146,25 +152,45 @@ class ComposerDiffCommand extends Command
         $fromMap = array_column($fromLock['packages'] ?? [], null, 'name');
         $toMap = array_column($toLock['packages'] ?? [], null, 'name');
 
+        $customGroups = [];
+        foreach ($input->getOption('group') as $g) {
+            [$name, $prefix] = explode(':', $g, 2) + [null, null];
+            if ($name && $prefix) {
+                $customGroups[$name] = $prefix;
+            }
+        }
+
+
         $grouped = [
             'typo3-core' => [],
             'typo3-core-extensions' => [],
             'typo3-extensions' => [],
-            'other' => [],
         ];
+        foreach ($customGroups as $groupName => $_) {
+            $grouped[$groupName] = [];
+        }
+        $grouped['other'] = [];
 
         foreach ($toMap + $fromMap as $name => $pkg) {
             $type = $pkg['type'] ?? '';
 
-            $group = match ($type) {
-                'typo3-cms-framework' => 'typo3-core-extensions',
-                'typo3-cms-extension' => 'typo3-extensions',
-                default => 'other'
+            $group = 'other'; // default
 
-            };
+            foreach ($customGroups as $groupName => $prefix) {
+                if (str_starts_with($name, $prefix)) {
+                    $group = $groupName;
+                    break;
+                }
+            }
 
+            if($group === 'other') {
             if ($name === 'typo3/cms-core') {
                 $group = 'typo3-core';
+                } elseif ($type === 'typo3-cms-framework') {
+                    $group = 'typo3-core-extensions';
+                } elseif ($type === 'typo3-cms-extension') {
+                    $group = 'typo3-extensions';
+                }
             }
             $grouped[$group][$name] = [
                 'from' => $fromMap[$name]['version'] ?? null,
@@ -212,8 +238,6 @@ class ComposerDiffCommand extends Command
             $htmlOutput .= '</body></html>';
             $fileWritten = $this->writeFile($filename, $htmlOutput);
             $output->writeln("<info>File written to {$fileWritten}</info>");
-
-
         } elseif ($isMd) {
             $mdOutput = '';
             foreach ($report as $group => $statuses) {
