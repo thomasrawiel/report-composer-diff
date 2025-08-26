@@ -23,7 +23,7 @@ I recommend installing in dev environment
 --json      - Write report.json
 --txt       - Write report.txt
 --md        - Write report.md
---filename  - Filename (& directory) where the report should be saved (needs --html or --json)
+--filename  - Filename (& directory) where the report should be saved (needs --html, --md, --txt or --json)
 --from      - Begin at git-ref
 --to        - Stop at git-ref
 --repo      - change directory
