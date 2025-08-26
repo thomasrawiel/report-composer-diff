@@ -11,6 +11,11 @@ Key features:
 - Outputs results in multiple formats: console, HTML, JSON, Markdown, or plain text.
 - Generates a summary table per group and a detailed per-package report.
 
+# Installation
+I recommend installing in dev environment
+
+`composer require traw/report-composer-diff --dev`
+
 # Usage
 
 ```
