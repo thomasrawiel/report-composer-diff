@@ -125,13 +125,6 @@ class ComposerDiffCommand extends Command
             }
         }
 
-        if ($isHtml && $filename && !str_ends_with($filename, '.html')) {
-            throw new \RuntimeException('--filename must end in .html when using --html');
-        }
-        if ($isJson && $filename && !str_ends_with($filename, '.json')) {
-            throw new \RuntimeException('--filename must end in .json when using --json');
-        }
-
         $getComposerLock = fn(string $tag): array => json_decode(
             (new Process(['git', '-C', $repo, 'show', "$tag:composer.lock"]))->mustRun()->getOutput(),
             true
@@ -139,15 +132,6 @@ class ComposerDiffCommand extends Command
 
         $fromLock = $getComposerLock($fromRef);
         $toLock = $getComposerLock($toRef);
-
-        $classify = fn(array $from, array $to): array => [
-            'added' => array_udiff($to, $from, fn($a, $b) => strcmp($a['name'], $b['name'])),
-            'removed' => array_udiff($from, $to, fn($a, $b) => strcmp($a['name'], $b['name'])),
-            'updated' => array_uintersect($from, $to, fn($a, $b) => strcmp($a['name'], $b['name']))
-                ? array_filter($to, fn($pkg) => isset($fromMap[$pkg['name']]) && $fromMap[$pkg['name']]['version'] !== $pkg['version'])
-                : [],
-            'unchanged' => array_filter($to, fn($pkg) => isset($fromMap[$pkg['name']]) && $fromMap[$pkg['name']]['version'] === $pkg['version']),
-        ];
 
         $fromMap = array_column($fromLock['packages'] ?? [], null, 'name');
         $toMap = array_column($toLock['packages'] ?? [], null, 'name');
