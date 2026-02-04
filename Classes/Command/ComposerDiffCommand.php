@@ -241,7 +241,13 @@ class ComposerDiffCommand extends Command
             $css = $this->getCss();
             $htmlOutput = '<html><head><style>' . $css . '</style></head><body>';
 
-            $htmlOutput .= '<h2>Summary per group</h2><table class="summary-table"><tr><th>Group</th><th>Added</th><th>Removed</th><th>Updated</th><th>Unchanged</th></tr>';
+            $htmlOutput .= '<h2>Contents</h2><ul class="contents"><li><a href="#summary">Summary</a></li>';
+            foreach ($report as $group => $statuses) {
+                $htmlOutput .= '<li><a href="#' . $group . '">' . $group . '</a></li>';
+            }
+            $htmlOutput .= '</ul>';
+
+            $htmlOutput .= '<details open id="summary"><summary><h2>Summary per group</h2></summary><table class="summary-table"><tr><th>Group</th><th>Added</th><th>Removed</th><th>Updated</th><th>Unchanged</th></tr>';
             foreach ($summary as $group => $counts) {
                 $htmlOutput .= "<tr>
                     <td>$group</td>
@@ -251,16 +257,16 @@ class ComposerDiffCommand extends Command
                     <td class='unchanged'>{$counts['unchanged']}</td>
                 </tr>";
             }
-            $htmlOutput .= '</table>';
+            $htmlOutput .= '</table></details>';
 
             foreach ($report as $group => $statuses) {
-                $htmlOutput .= "<h2>$group</h2><table><tr><th>Status</th><th>Package</th><th>From</th><th>To</th></tr>";
+                $htmlOutput .= '<details' . (in_array($group, ['typo3-core-extensions', 'other'], true) ? '' : ' open') . ' id="' . $group . '"><summary><h2>' . $group . '</h2></summary><table><tr><th>Status</th><th>Package</th><th>From</th><th>To</th></tr>';
                 foreach ($statuses as $status => $entries) {
                     foreach ($entries as $name => $vers) {
                         $htmlOutput .= "<tr class='$status'><td>$status</td><td>$name</td><td>{$vers['from']}</td><td>{$vers['to']}</td></tr>";
                     }
                 }
-                $htmlOutput .= '</table>';
+                $htmlOutput .= '</table></details>';
             }
             $htmlOutput .= '</body></html>';
             $fileWritten = $this->writeFile($filename, $htmlOutput);
@@ -407,6 +413,27 @@ class ComposerDiffCommand extends Command
             margin: 2rem 0 1rem;
             padding-bottom: .5rem;
             border-bottom: 1px solid;
+        }
+
+        summary {
+            cursor: pointer;
+        }
+
+        summary h2 {
+            display: inline-block;
+            width: calc(100% - 2rem);
+            padding-left: 1rem;
+        }
+
+        .contents {
+            display:block;
+            margin-left: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        a {
+           color: hsl(210 40% 98%);
+           margin-bottom: 3rem;
         }
 
         td,
