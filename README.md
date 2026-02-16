@@ -6,6 +6,7 @@ Key features:
 
 - Supports specifying source (--from) and target (--to) Git tags; if not provided, falls back to the two latest tags.
 - Reads composer.lock directly from Git without checking out the refs.
+- Detects changes, even if only branches are used (Branch names in composer.json must start with `dev-`, for example `dev-develop`)
 - Classifies packages into added, removed, updated, and unchanged.
 - Supports custom groups based on package name prefixes, in addition to built-in TYPO3 groups. Multiple prefixes per group are allowed.
 - Outputs results in multiple formats: console, HTML, JSON, Markdown, or plain text.

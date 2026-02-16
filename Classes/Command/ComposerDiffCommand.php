@@ -196,6 +196,8 @@ class ComposerDiffCommand extends Command
             $grouped[$group][$name] = [
                 'from' => $fromMap[$name]['version'] ?? null,
                 'to' => $toMap[$name]['version'] ?? null,
+                'fromRef' => $fromMap[$name]['source']['reference'] ?? null,
+                'toRef' => $toMap[$name]['source']['reference'] ?? null,
             ];
         }
 
@@ -203,13 +205,34 @@ class ComposerDiffCommand extends Command
         foreach ($grouped as $group => $packages) {
             foreach ($packages as $name => $vers) {
                 $status = 'unchanged';
-                if ($vers['from'] === null) {
+
+                $fromVersion = $vers['from'] ?? null;
+                $toVersion = $vers['to'] ?? null;
+
+                $fromRef = $vers['fromRef'] ?? null;
+                $toRef = $vers['toRef'] ?? null;
+
+                if ($fromVersion === null) {
                     $status = 'added';
-                } elseif ($vers['to'] === null) {
+                } elseif ($toVersion === null) {
                     $status = 'removed';
-                } elseif ($vers['from'] !== $vers['to']) {
+                } elseif ($fromVersion !== $toVersion) {
+                    //version change 1.0.0 => 1.2.0
                     $status = 'updated';
+                } elseif (
+                    //branch change dev-develop (hashold) => dev-develop (hashnew)
+                    str_starts_with((string)$fromVersion, 'dev-') &&
+                    $fromRef !== null && $toRef !== null &&
+                    $fromRef !== $toRef
+                ) {
+                    $status = 'updated';
+                    $fromVersion .= ' (' . substr($fromRef, 0, 7) . ')';
+                    $toVersion .= ' (' . substr($toRef, 0, 7) . ')';
+
+                    $vers['from'] = $fromVersion;
+                    $vers['to'] = $toVersion;
                 }
+
                 $report[$group][$status][$name] = $vers;
             }
         }
