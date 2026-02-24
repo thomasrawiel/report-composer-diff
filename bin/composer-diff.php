@@ -19,6 +19,6 @@ foreach ($autoloadPaths as $path) {
 
 $app = new \Symfony\Component\Console\Application('ComposerDiff');
 $command = new \TRAW\ReportComposerDiff\Command\ComposerDiffCommand('composer-diff');
-$app->add($command);
+$app->addCommand($command);
 $app->setDefaultCommand($command->getName(), true);
 $app->run();
