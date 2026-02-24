@@ -31,7 +31,8 @@ class ComposerDiffCommand extends Command
             ->addOption('json', null, InputOption::VALUE_NONE, 'Output as JSON')
             ->addOption('md', null, InputOption::VALUE_NONE, 'Output as MD')
             ->addOption('txt', null, InputOption::VALUE_NONE, 'Output as txt')
-            ->addOption('filename', null, InputOption::VALUE_OPTIONAL, 'Target output filename (must match format)');
+            ->addOption('filename', null, InputOption::VALUE_OPTIONAL, 'Target output filename (must match format)')
+            ->addOption('include-dev', null, InputOption::VALUE_NONE, 'Include dev packages');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -44,6 +45,7 @@ class ComposerDiffCommand extends Command
         $isMd = $input->getOption('md');
         $isTxt = $input->getOption('txt');
         $filename = $input->getOption('filename');
+        $includeDev = $input->getOption('include-dev');
 
         if ($isHtml && $filename && !str_ends_with($filename, '.html')) {
             throw new \RuntimeException('--filename must end in .html when using --html');
@@ -136,6 +138,10 @@ class ComposerDiffCommand extends Command
         $fromMap = array_column($fromLock['packages'] ?? [], null, 'name');
         $toMap = array_column($toLock['packages'] ?? [], null, 'name');
 
+        if($includeDev) {
+            $fromMap = array_merge($fromMap, array_column($fromLock['packages-dev'] ?? [], null, 'name'));
+            $toMap = array_merge($fromMap, array_column($toLock['packages-dev'] ?? [], null, 'name'));
+        }
         $customGroups = [];
         foreach ($input->getOption('group') as $g) {
             [$name, $prefixesString] = array_pad(explode(':', $g, 2), 2, '');

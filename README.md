@@ -20,15 +20,17 @@ I recommend installing in dev environment
 # Usage
 
 ```
---html      - Write report.html
---json      - Write report.json
---txt       - Write report.txt
---md        - Write report.md
---filename  - Filename (& directory) where the report should be saved (needs --html, --md, --txt or --json)
---from      - Begin at git-ref
---to        - Stop at git-ref
---repo      - change directory
---group     - add one or more custom groups in the format groupname:prefix/,prefix2/,prefix3
+--html          - Write report.html
+--json          - Write report.json
+--txt           - Write report.txt
+--md            - Write report.md
+--filename      - Filename (& directory) where the report should be saved (needs --html, --md, --txt or --json)
+--from          - Begin at git-ref
+--to            - Stop at git-ref
+--repo          - change directory
+--group         - add one or more custom groups in the format groupname:prefix/,prefix2/,prefix3
+--repo          - path to the .git repo
+--include-dev   - Include dev-packages installed with `require-dev`
 ```
 
 
@@ -52,7 +54,13 @@ Writes report.json
 
 Compare Tags
 
-`php vendor/bin/composer-diff --from=v12.4.2 --to=v12.4.3 --html` 
+`php vendor/bin/composer-diff --from=v12.4.2 --to=v12.4.3 --html`
+
+---
+
+Use a specific repository
+
+`php vendor/bin/composer-diff --repo=/home/user/projects/myrepo`
 
 ---
 
