@@ -9,7 +9,7 @@ Key features:
 - Detects changes, even if only branches are used (Branch names in composer.json must start with `dev-`, for example `dev-develop`)
 - Classifies packages into added, removed, updated, and unchanged.
 - Supports custom groups based on package name prefixes, in addition to built-in TYPO3 groups. Multiple prefixes per group are allowed.
-- Outputs results in multiple formats: console, HTML, JSON, Markdown, or plain text.
+- Outputs results in multiple formats: console, HTML, PDF, JSON, Markdown, or plain text.
 - Generates a summary table per group and a detailed per-package report.
 
 # Installation
@@ -24,7 +24,7 @@ I recommend installing in dev environment
 --json          - Write report.json
 --txt           - Write report.txt
 --md            - Write report.md
---filename      - Filename (& directory) where the report should be saved (needs --html, --md, --txt or --json)
+--filename      - Filename (& directory) where the report should be saved (needs --html, --pdf, --md, --txt or --json). Filename without file extension
 --from          - Begin at git-ref
 --to            - Stop at git-ref
 --repo          - change directory
@@ -46,11 +46,24 @@ Writes report.html
 
 ---
 
+Writes report.pdf
+
+`php vendor/bin/composer-diff --pdf`
+
+---
+
 Writes report.json
 
 `php vendor/bin/composer-diff --json`
 
 ---
+
+Writes report.html and report.pdf
+
+`php vendor/bin/composer-diff --html`
+
+---
+
 
 Compare Tags
 
@@ -78,7 +91,7 @@ Compare Branch to Branch
 
 Write to a subdirectory
 
-`php vendor/bin/composer-diff --html --filename=report/report.html`
+`php vendor/bin/composer-diff --html --filename=report/report`
 
 ---
 
@@ -88,6 +101,19 @@ Custom group
 
 ---
 
-Multiple prefixes in one group - groupname:comma-list
+Custom group with title, use `""`
 
-`php vendor/bin/composer-diff --group=mycompany:prefix1/,prefix2/,prefix3`
+`php vendor/bin/composer-diff --group="My custom packages":traw/ --group=mycompany:namespaceprefix/`
+
+---
+
+Multiple custom groups and multiple prefixes in one group - groupname:comma-list
+
+`php vendor/bin/composer-diff --group=mycompany:prefix1/,prefix2/,prefix3 --group="My custom packages":prefix4/,prefix5/`
+
+
+---
+
+Create multiple output formats at once
+
+`php vendor/bin/composer-diff --pdf --html --txt --md --json`

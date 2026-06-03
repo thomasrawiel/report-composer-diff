@@ -31,6 +31,7 @@ class ComposerDiffCommand extends Command
             ->addOption('json', null, InputOption::VALUE_NONE, 'Output as JSON')
             ->addOption('md', null, InputOption::VALUE_NONE, 'Output as MD')
             ->addOption('txt', null, InputOption::VALUE_NONE, 'Output as txt')
+            ->addOption('pdf', null, InputOption::VALUE_NONE, 'Output as PDF')
             ->addOption('filename', null, InputOption::VALUE_OPTIONAL, 'Target output filename (must match format)')
             ->addOption('include-dev', null, InputOption::VALUE_NONE, 'Include dev packages');
     }
@@ -44,33 +45,9 @@ class ComposerDiffCommand extends Command
         $isJson = $input->getOption('json');
         $isMd = $input->getOption('md');
         $isTxt = $input->getOption('txt');
+        $isPdf = $input->getOption('pdf');
         $filename = $input->getOption('filename');
         $includeDev = $input->getOption('include-dev');
-
-        if ($isHtml && $filename && !str_ends_with($filename, '.html')) {
-            throw new \RuntimeException('--filename must end in .html when using --html');
-        }
-        if ($isJson && $filename && !str_ends_with($filename, '.json')) {
-            throw new \RuntimeException('--filename must end in .json when using --json');
-        }
-        if ($isMd && $filename && !str_ends_with($filename, '.md')) {
-            throw new \RuntimeException('--filename must end in .md when using --md');
-        }
-        if ($isTxt && $filename && !str_ends_with($filename, '.txt')) {
-            throw new \RuntimeException('--filename must end in .txt when using --txt');
-        }
-
-        if (!$filename) {
-            if ($isHtml) {
-                $filename = 'report.html';
-            } elseif ($isJson) {
-                $filename = 'report.json';
-            } elseif ($isMd) {
-                $filename = 'report.md';
-            } elseif ($isTxt) {
-                $filename = 'report.txt';
-            }
-        }
 
         chdir($repo);
 
@@ -138,9 +115,9 @@ class ComposerDiffCommand extends Command
         $fromMap = array_column($fromLock['packages'] ?? [], null, 'name');
         $toMap = array_column($toLock['packages'] ?? [], null, 'name');
 
-        if($includeDev) {
+        if ($includeDev) {
             $fromMap = array_merge($fromMap, array_column($fromLock['packages-dev'] ?? [], null, 'name'));
-            $toMap = array_merge($fromMap, array_column($toLock['packages-dev'] ?? [], null, 'name'));
+            $toMap = array_merge($toMap, array_column($toLock['packages-dev'] ?? [], null, 'name'));
         }
         $customGroups = [];
         foreach ($input->getOption('group') as $g) {
@@ -259,18 +236,23 @@ class ComposerDiffCommand extends Command
             ];
         }
 
+
         if ($isJson) {
             $jsonOutput = json_encode([
                 'summary' => $summary,
                 'report' => $report,
             ], JSON_PRETTY_PRINT);
-            $fileWritten = $this->writeFile($filename ?? 'report.json', $jsonOutput);
+            $fileWritten = $this->writeFile(($filename ?? 'report') . '.json', $jsonOutput);
             $output->writeln("<info>File written to {$fileWritten}</info>");
-        } elseif ($isHtml) {
+        }
+        if ($isHtml || $isPdf) {
             $css = $this->getCss();
-            $htmlOutput = '<html><head><style>' . $css . '</style></head><body>';
+            $htmlCss = $this->getHtmlCss();
 
-            $htmlOutput .= '<h2>Contents</h2><ul class="contents"><li><a href="#summary">Summary</a></li>';
+            $pdfHead = '<html><head><style>' . $css . '</style></head>';
+            $htmlHead = '<html><head><style>' . $css . $htmlCss . '</style></head>';
+
+            $htmlOutput = '<body><h2>Contents</h2><ul class="contents"><li><a href="#summary">Summary</a></li>';
             foreach ($report as $group => $statuses) {
                 $htmlOutput .= '<li><a href="#' . $group . '">' . $group . '</a></li>';
             }
@@ -298,9 +280,24 @@ class ComposerDiffCommand extends Command
                 $htmlOutput .= '</table></details>';
             }
             $htmlOutput .= '</body></html>';
-            $fileWritten = $this->writeFile($filename, $htmlOutput);
-            $output->writeln("<info>File written to {$fileWritten}</info>");
-        } elseif ($isMd) {
+
+            if ($isPdf) {
+                $dompdf = new \Dompdf\Dompdf(["defaultFont" => "DejaVu Sans"]);
+
+                $dompdf->loadHtml($pdfHead . $htmlOutput);
+                $dompdf->setPaper('A4', 'portrait');
+                $dompdf->render();
+
+                $fileWritten = $this->writeFile(($filename ?? 'report') . '.pdf', $dompdf->output());
+                $output->writeln("<info>File written to {$fileWritten}</info>");
+            }
+
+            if ($isHtml) {
+                $fileWritten = $this->writeFile(($filename ?? 'report') . '.html', $htmlHead . $htmlOutput);
+                $output->writeln("<info>File written to {$fileWritten}</info>");
+            }
+        }
+        if ($isMd) {
             $mdOutput = "## Summary per group\n\n";
             $mdOutput .= "| Group | Added | Removed | Updated | Unchanged |\n|---|---|---|---|---|\n";
             foreach ($summary as $group => $counts) {
@@ -319,10 +316,11 @@ class ComposerDiffCommand extends Command
                     $mdOutput .= "\n";
                 }
             }
-            $fileWritten = $this->writeFile($filename, $mdOutput);
+            $fileWritten = $this->writeFile(($filename ?? 'report') . '.md', $mdOutput);
             $output->writeln("<info>File written to {$fileWritten}</info>");
 
-        } elseif ($isTxt) {
+        }
+        if ($isTxt) {
             $txtOutput = "SUMMARY PER GROUP\n";
             foreach ($summary as $group => $counts) {
                 $txtOutput .= strtoupper($group) . ": added={$counts['added']}, removed={$counts['removed']}, updated={$counts['updated']}, unchanged={$counts['unchanged']}\n";
@@ -339,10 +337,12 @@ class ComposerDiffCommand extends Command
                 }
                 $txtOutput .= "\n";
             }
-            $fileWritten = $this->writeFile($filename, $txtOutput);
+            $fileWritten = $this->writeFile(($filename ?? 'report') . '.txt', $txtOutput);
             $output->writeln("<info>File written to {$fileWritten}</info>");
 
-        } else {
+        }
+
+        if (!$isJson && !$isHtml && !$isMd && !$isTxt && !$isPdf) {
             //console output
             $output->writeln("\n<info>Summary per group</info>");
             foreach ($summary as $group => $counts) {
@@ -409,27 +409,33 @@ class ComposerDiffCommand extends Command
 
     private function getCss(): string
     {
-        return "
+        $css = "
+        *,body {
+            font-family: helvetica !important;
+            }
+
         body,
         table {
-            background-color: hsl(0 0% 100%);
+            background-color: #ffffff;
+
         }
 
         h2,
         th {
             font-weight: 600;
-            color: hsl(222.2 84% 4.9%);
+            color: #020817;
         }
 
         body,
         h2,
         td:nth-child(2),
-        th {
-            color: hsl(222.2 84% 4.9%);
+        th,
+         a{
+            color: #020817;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+
             line-height: 1.6;
             min-height: 100vh;
             max-width: 800px;
@@ -461,7 +467,7 @@ class ComposerDiffCommand extends Command
         }
 
         a {
-           color: hsl(210 40% 98%);
+
            margin-bottom: 3rem;
         }
 
@@ -486,7 +492,7 @@ class ComposerDiffCommand extends Command
         }
 
         th {
-            background-color: hsl(210 40% 98%);
+            background-color: #f8fafc;
             text-align: left;
         }
 
@@ -495,23 +501,23 @@ class ComposerDiffCommand extends Command
         }
 
         .added {
-            background-color: hsl(143 85% 96%);
-            border-left: 3px solid hsl(142 76% 36%);
+            background-color: #ecfdf5;
+            border-left: 3px solid #16a34a;
         }
 
         .removed {
-            background-color: hsl(0 86% 97%);
-            border-left: 3px solid hsl(0 84% 60%);
+            background-color: #fef2f2;
+            border-left: 3px solid #dc2626;
         }
 
         .updated {
-            background-color: hsl(48 100% 96%);
-            border-left: 3px solid hsl(45 93% 47%);
+            background-color: #fefce8;
+            border-left: 3px solid #ca8a04;
         }
 
         .unchanged {
-            background-color: hsl(210 40% 98%);
-            border-left: 3px solid hsl(215 16% 47%);
+            background-color: #f8fafc;
+            border-left: 3px solid #6b7280;
         }
 
         td:first-child {
@@ -524,24 +530,24 @@ class ComposerDiffCommand extends Command
         td:nth-child(2),
         td:nth-child(3),
         td:nth-child(4) {
-            font-family: ui-monospace, SFMono-Regular, \"SF Mono\", Consolas, \"Liberation Mono\", Menlo, monospace;
+            font-family: helvetica;
             font-size: .8125rem;
         }
 
         .added td:first-child {
-            color: hsl(142 76% 36%);
+            color: #16a34a;
         }
 
         .removed td:first-child {
-            color: hsl(0 84% 60%);
+            color: #dc2626;
         }
 
         .updated td:first-child {
-            color: hsl(45 93% 47%);
+            color: #ca8a04;
         }
 
         .unchanged td:first-child {
-            color: hsl(215 16% 47%);
+            color: #6b7280;
         }
 
         td:nth-child(2) {
@@ -550,13 +556,64 @@ class ComposerDiffCommand extends Command
 
         td:nth-child(3),
         td:nth-child(4) {
-            color: hsl(215.4 16.3% 46.9%);
+            color: #6b7280;
             font-weight: 400;
         }
 
         td:nth-child(4) {
-            color: hsl(142 76% 36%);
+            color: #16a34a;
             font-weight: 500;
+        }
+
+
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Summary table tweaks */
+        .summary-table td:first-child {
+            text-transform: none;
+            font-weight: 600;
+            font-size: .875rem;
+            letter-spacing: normal;
+        }
+
+        /* Color numbers according to status */
+        .summary-table .added {
+            color: #16a34a;
+        }
+
+        .summary-table .removed {
+            color: #dc2626;
+        }
+
+        .summary-table .updated {
+            color: #ca8a04;
+        }
+
+        .summary-table .unchanged {
+            color: #6b7280;
+        }
+        ";
+
+        return $css;
+    }
+
+    protected function getHtmlCss(): string
+    {
+        $css = "
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        td:nth-child(2),
+        td:nth-child(3),
+        td:nth-child(4) {
+            font-family: ui-monospace, SFMono-Regular, \"SF Mono\", Consolas, \"Liberation Mono\", Menlo, monospace;
+
         }
 
         @media (max-width: 768px) {
@@ -620,82 +677,52 @@ class ComposerDiffCommand extends Command
         @media (prefers-color-scheme: dark) {
             body,
             table {
-                background-color: hsl(222.2 84% 4.9%);
+                background-color: #020817;
             }
 
             h2,
             td,
             th {
-                border-bottom-color: hsl(217.2 32.6% 17.5%);
+                border-bottom-color: #1f2937;
             }
 
             body,
             h2,
             td:nth-child(2),
-            th {
-                color: hsl(210 40% 98%);
+            th,
+            a{
+                color: #f8fafc;
             }
 
             table {
-                border-color: hsl(217.2 32.6% 17.5%);
+                border-color: #1f2937;
             }
 
             th {
-                background-color: hsl(217.2 32.6% 17.5%);
+                background-color: #1f2937;
             }
 
             td:nth-child(3) {
-                color: hsl(215.4 16.3% 56.9%);
+                color: #9ca3af;
             }
 
             .added {
-                background-color: hsl(142 76% 6%);
+                background-color: #052e16;
             }
 
             .removed {
-                background-color: hsl(0 84% 6%);
+                background-color: #450a0a;
             }
 
             .updated {
-                background-color: hsl(45 93% 6%);
+                background-color: #422006;
             }
 
             .unchanged {
-                background-color: hsl(217.2 32.6% 17.5%);
+                background-color: #1f2937;
             }
-        }
+        }";
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        /* Summary table tweaks */
-        .summary-table td:first-child {
-            text-transform: none;
-            /* no uppercase for group names */
-            font-weight: 600;
-            font-size: .875rem;
-            letter-spacing: normal;
-        }
-
-        /* Color numbers according to status */
-        .summary-table .added {
-            color: hsl(142 76% 36%);
-        }
-
-        .summary-table .removed {
-            color: hsl(0 84% 60%);
-        }
-
-        .summary-table .updated {
-            color: hsl(45 93% 47%);
-        }
-
-        .summary-table .unchanged {
-            color: hsl(215 16% 47%);
-        }
-        ";
+        return $css;
     }
 }
